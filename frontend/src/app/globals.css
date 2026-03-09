@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f1115; /* Dark enterprise background */
+  --foreground: #e2e8f0; /* Soft white text */
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --accent: #8b5cf6;
+  --accent-foreground: #ffffff;
+  --border: #334155;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@theme {
+  --font-sans: 'Manrope', sans-serif;
+  --font-mono: var(--font-geist-mono);
+  
+  --color-primary: #ff2a2a;      /* Aggressive Neon Red */
+  --color-accent-olive: #ffffff; /* Re-mapped to white for text */
+  --color-background-light: #141416; /* Dark gray surface */
+  --color-background-dark: #0a0a0c;  /* Deep black background */
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Manrope', sans-serif;
+}
+
+.vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+}
