@@ -11,8 +11,12 @@ client.on('error', (err) => console.error('Redis Client Error', err));
 
 export const connectRedis = async () => {
   if (!client.isOpen) {
-    await client.connect();
-    console.log('Redis Connected');
+    try {
+      await client.connect();
+      console.log('Redis Connected');
+    } catch (error) {
+      console.log('Redis Connection Optional - Proceeding Without Cache');
+    }
   }
 };
 
