@@ -5,9 +5,17 @@ dotenv.config();
 
 const client = createClient({
   url: process.env.REDIS_URL || 'redis://localhost:6379',
+  socket: {
+    reconnectStrategy: false // Disable reconnection attempts immediately if it fails to connect
+  }
 });
 
-client.on('error', (err) => console.error('Redis Client Error', err));
+// Suppress unhandled promise rejections originating from redis client errors.
+client.on('error', (err) => {
+  if (err.code !== 'ECONNREFUSED') {
+    console.error('Redis Client Error', err)
+  }
+});
 
 export const connectRedis = async () => {
   if (!client.isOpen) {
