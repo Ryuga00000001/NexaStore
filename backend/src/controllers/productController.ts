@@ -11,8 +11,11 @@ const CACHE_KEY = 'products_all';
 // @access  Public
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Check Redis cache first
-    const cachedProducts = await redisClient.get(CACHE_KEY);
+    // Check Redis cache first (Gracefully handle if redis is down)
+    let cachedProducts = null;
+    try {
+       cachedProducts = await redisClient.get(CACHE_KEY);
+    } catch(e) { console.warn('Redis read failed'); }
     
     if (cachedProducts) {
       res.json(JSON.parse(cachedProducts));
@@ -22,8 +25,10 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     // Cache miss, fetch from DB
     const products = await Product.find({}).populate('vendor', 'storeName');
     
-    // Store in Redis with expiration of 1 hour (3600 seconds)
-    await redisClient.setEx(CACHE_KEY, 3600, JSON.stringify(products));
+    // Store in Redis (Gracefully handle)
+    try {
+      await redisClient.setEx(CACHE_KEY, 3600, JSON.stringify(products));
+    } catch(e) { console.warn('Redis write failed'); }
 
     res.json(products);
   } catch (error) {
@@ -54,10 +59,16 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
 export const createProduct = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     // Find vendor for the current user
-    const vendor = await Vendor.findOne({ user: req.user?._id });
+    let vendor = await Vendor.findOne({ user: req.user?._id });
     
-    // To simplify for this demo, if vendor doesn't exist, allow admin or auto-create mock vendor profile
-    if (!vendor && req.user?.role !== 'admin') {
+    // Create mock vendor on the fly if admin
+    if (!vendor && req.user?.role === 'admin') {
+       vendor = await Vendor.create({
+         user: req.user._id,
+         storeName: 'Nexa Official Op-' + Math.floor(Math.random() * 999),
+         isStripeConnected: true
+       });
+    } else if (!vendor && req.user?.role !== 'admin') {
       res.status(403).json({ message: 'Vendor profile required to create products' });
       return;
     }
@@ -65,7 +76,7 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
     const { name, description, price, stock, category, imageUrl } = req.body;
 
     const product = new Product({
-      vendor: vendor?._id || req.user?._id, // fallback for admin
+      vendor: vendor?._id,
       name,
       description,
       price,
@@ -76,12 +87,12 @@ export const createProduct = async (req: AuthRequest, res: Response): Promise<vo
 
     const createdProduct = await product.save();
 
-    // Invalidate Cache
-    await redisClient.del(CACHE_KEY);
+    // Invalidate Cache gracefully
+    try { await redisClient.del(CACHE_KEY); } catch(e) { console.warn('Redis invalidate failed'); }
 
     res.status(201).json(createdProduct);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: 'Server Error', error });
   }
 };
 
@@ -112,8 +123,8 @@ export const updateProduct = async (req: AuthRequest, res: Response): Promise<vo
 
       const updatedProduct = await product.save();
       
-      // Invalidate Cache
-      await redisClient.del(CACHE_KEY);
+      // Invalidate Cache gracefully
+      try { await redisClient.del(CACHE_KEY); } catch(e) { console.warn('Redis invalidate failed'); }
 
       res.json(updatedProduct);
     } else {
@@ -141,8 +152,8 @@ export const deleteProduct = async (req: AuthRequest, res: Response): Promise<vo
 
       await Product.findByIdAndDelete(req.params.id);
 
-      // Invalidate Cache
-      await redisClient.del(CACHE_KEY);
+      // Invalidate Cache gracefully
+      try { await redisClient.del(CACHE_KEY); } catch(e) { console.warn('Redis invalidate failed'); }
 
       res.json({ message: 'Product removed' });
     } else {

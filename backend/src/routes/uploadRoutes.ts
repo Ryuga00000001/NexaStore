@@ -37,7 +37,8 @@ const upload = multer({
 
 router.post('/', upload.single('image'), (req: Request, res: Response) => {
   if (req.file) {
-    res.send(`/${req.file.path}`);
+    const fixedPath = req.file.path.replace(/\\/g, '/');
+    res.json({ imageUrl: `/${fixedPath}` });
   } else {
     res.status(400).send({ message: 'No image uploaded' });
   }
